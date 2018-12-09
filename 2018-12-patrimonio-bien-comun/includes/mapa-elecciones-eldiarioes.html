@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset='utf-8' />
+  <title>Display a map</title>
+  <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+  <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.46.0/mapbox-gl.js'></script>
+  <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.46.0/mapbox-gl.css' rel='stylesheet' />
+  <link href="https://fonts.googleapis.com/css?family=Roboto:400,700" rel="stylesheet">
+  <link rel='stylesheet' href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v2.3.0/mapbox-gl-geocoder.css'
+    type='text/css' />
+
+  <script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v2.3.0/mapbox-gl-geocoder.min.js'></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    #map {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 100%;
+    }
+
+    #mapbox-tooltip-contenedor h3 {
+      margin-bottom: 5px;
+      margin-top: 5px
+    }
+
+    #mapbox-tooltip-contenedor .columna-datos {
+      text-align: right;
+      padding-bottom: 0px;
+      padding-top: 0px;
+      border-bottom: 1px solid #ddd;
+
+    }
+
+    #mapbox-tooltip-contenedor .primeracolumna {
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 0px;
+      padding-top: 0px;
+
+    }
+
+    .mapbox-popup-contenedor {
+      opacity: 0.95;
+      font-family: 'Roboto', sans-serif;
+      width: 200px;
+    }
+
+    .mapboxgl-popup-anchor-right {
+      left: -15px
+    }
+
+    .mapboxgl-popup-anchor-bottom-right {
+      left: -15px
+    }
+
+    .mapboxgl-popup-anchor-top-right {
+      left: -15px
+    }
+
+    .mapboxgl-popup-anchor-bottom {
+      top: -15px
+    }
+
+    .mapboxgl-popup-anchor-top {
+      top: 20px
+    }
+
+    .mapboxgl-popup-anchor-left {
+      left: 15px
+    }
+
+    .mapboxgl-popup-anchor-bottom-left {
+      left: 15px
+    }
+
+    .mapboxgl-popup-anchor-top-left {
+      left: 15px
+    }
+  </style>
+</head>
+
+<body>
+  <div id='map'></div>
+
+  <script>
+    mapboxgl.accessToken = 'pk.eyJ1IjoicmF1bHNhbmNoZXplbGRpYXJpbyIsImEiOiJjamt3cmh6MXQwMHZlM3ZvZnprZWVvcWN4In0.-6I0cf8YXAABfTTuzLp0HQ';
+
+    var map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/raulsanchezeldiario/cjp9mgkgf03h52quau1fqjcwq',
+      center: [-4.7684, 37.8866],
+      zoom: 13.0,
+      minZoom: 9
+    });
+
+    map.scrollZoom.disable();
+
+    map.addControl(new MapboxGeocoder({
+      accessToken: mapboxgl.accessToken,
+      language: 'es',
+      country: 'es',
+      placeholder: 'Busca tu municipio o calle',
+      bbox: [-7.540126, 35.918419, -1.629734, 38.684069],
+    }));
+
+    map.addControl(new mapboxgl.NavigationControl());
+
+    // Create a popup, but don't add it to the map yet.
+    var popup = new mapboxgl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      className: 'mapbox-popup-contenedor'
+    });
+
+    var hoveredStateId =  null;
+
+    map.on('load', function() {
+
+      map.addSource('tiles_map', {
+        type: 'vector',
+        url: 'mapbox://raulsanchezeldiario.6mhfblnz'
+      });
+
+      // capa con bordes
+      map.addLayer({
+        id: 'bordes-munis',
+        source: 'tiles_map',
+        type: 'line',
+        'source-layer': 'municipiosseccionescensalespartidos',
+        'paint': {
+          'line-color': ['case', ['boolean', ['feature-state', 'hover'], false], 'black', 'white'],
+          'line-width': ['case', ['boolean', ['feature-state', 'hover'], false], 3,0]}
+      }, 'place-village');
+
+      map.on('mousemove', 'municipiosseccionescensalespartidos', function (e) {
+
+        if (e.features.length > 0) {
+          if (hoveredStateId) {
+            map.setFeatureState({ source: 'tiles_map',
+                                  sourceLayer: 'municipiosseccionescensalespartidos',
+                                  id: hoveredStateId}, { hover: false});
+          }
+          hoveredStateId = e.features[0].id;
+          map.setFeatureState({ source: 'tiles_map',
+                              sourceLayer: 'municipiosseccionescensalespartidos',
+                              id: hoveredStateId}, { hover: true});
+        }
+
+        // Change the cursor style as a UI indicator.
+        map.getCanvas().style.cursor = 'pointer';
+
+        var coordinates = e.features[0].geometry.coordinates.slice();
+        var ppsoe = e.features[0].properties.ppsoe.toLocaleString();
+        var ppp = e.features[0].properties.ppp.toLocaleString();
+        var pcs = e.features[0].properties.pcs.toLocaleString();
+        var padelante = e.features[0].properties.padelante.toLocaleString();
+        var pvox = e.features[0].properties.pvox.toLocaleString();
+        var votospsoe = e.features[0].properties['PSOE-A'].toLocaleString();
+        var votospp = e.features[0].properties.PP.toLocaleString();
+        var votoscs = e.features[0].properties.Cs.toLocaleString();
+        var votosadelante = e.features[0].properties['ADELANTE ANDALUCÍA'].toLocaleString();
+        var votosvox = e.features[0].properties.VOX.toLocaleString();
+        var municipio = e.features[0].properties.MUNICIPIO;
+        var cusec = e.features[0].properties['COD_SEC'];
+        var cudis = e.features[0].properties['COD_DIST'];
+        var censototal = e.features[0].properties['Censo Total'];
+        var votostotales = e.features[0].properties['Votos Totales'];
+        var participacion = (votostotales / censototal * 100).toLocaleString(undefined, {
+          maximumFractionDigits: 1
+        });
+
+        // Ensure that if the map is zoomed out such that multiple
+        // copies of the feature are visible, the popup appears
+        // over the copy being pointed to.
+
+
+        // Populate the popup and set its coordinates
+        // based on the feature found.
+        popup.setLngLat(e.lngLat)
+          .setHTML('<div id="mapbox-tooltip-contenedor"><h3>' + municipio +
+            '</h3><p style="margin-top:0px">Distrito ' + cudis + ' Sección ' + cusec +
+            '</p><p style="margin-bottom:0px">Participación del <b>' +
+            participacion +
+            '%</b></p><table style="border-collapse: collapse;height:100px;width:100%"><tr><th></th><th style="text-align:right">Votos</th><th style="text-align:right">Porcentaje</th></tr><tr class="fila-tabla"><td class="primeracolumna"><span style="display: inline-block;width: 10px; height: 10px; background-color: #e02020; margin-right: 4px;margin-bottom:-1px"></span>PSOE</td><td class="columna-datos">' +
+            votospsoe + '</td><td class="columna-datos"><b>' + ppsoe +
+            '%</b></td></tr><tr class="fila-tabla"><td class="primeracolumna"><span style="display: inline-block;width: 10px; height: 10px; background-color: #02a2dd; margin-right: 4px;margin-bottom:-1px"></span>PP</td><td class="columna-datos">' +
+            votospp + '</td><td class="columna-datos"><b>' + ppp +
+            '%</b></td></tr><tr class="fila-tabla"><td class="primeracolumna"><span style="display: inline-block;width: 10px; height: 10px; background-color: #73c881; margin-right: 4px;margin-bottom:-1px"></span>Adel.And.</td><td class="columna-datos">' +
+            votosadelante + '</td><td class="columna-datos"><b>' + padelante +
+            '%</b></td></tr><tr class="fila-tabla"><td class="primeracolumna"><span style="display: inline-block;width: 10px; height: 10px; background-color: #ea8046; margin-right: 4px;margin-bottom:-1px"></span>Cs</td><td class="columna-datos">' +
+            votoscs + '</td><td class="columna-datos"><b>' + pcs +
+            '%</b></td></tr><tr class="fila-tabla"><td class="primeracolumna"><span style="display: inline-block;width: 10px; height: 10px; background-color: #AAD656; margin-right: 4px;margin-bottom:-1px"></span>Vox</td><td class="columna-datos">' +
+            votosvox + '</td><td class="columna-datos"><b>' + pvox + '%</b></td></tr></table></div>')
+          .addTo(map);
+      });
+
+      map.on('mouseleave', 'municipiosseccionescensalespartidos', function() {
+        map.getCanvas().style.cursor = '';
+        popup.remove();
+        if (hoveredStateId) {
+          map.setFeatureState({ source: 'tiles_map',
+                                sourceLayer: 'municipiosseccionescensalespartidos',
+                                id: hoveredStateId}, { hover: false});
+        }
+        hoveredStateId = null;
+      });
+
+    });
+  </script>
+
+<div style="background-color:#000;">Fuente: <a href="https://www.eldiario.es/andalucia/MAPA-partido-elecciones-andaluzas-manzana_0_842366730.html">El Diario.es</a></div>
+
+</body>
+
+</html>
